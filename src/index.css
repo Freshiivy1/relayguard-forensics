@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --paper: #f5f2ec;
+    --paper-deep: #ede9e0;
+    --paper-edge: #e3ded3;
+    --ink: #1c1b18;
+    --ink-soft: #57544b;
+    --ink-faint: #8a867a;
+    --hairline: #d8d2c4;
+    --green: #2f5b4c;
+    --green-deep: #244a3d;
+    --green-tint: #dce6df;
+    --red: #a4453a;
+    --red-deep: #8a372d;
+    --red-tint: #f0ddd8;
+    --amber: #b07e2b;
+    --amber-deep: #8a6420;
+    --amber-tint: #f0e4cc;
+    --canvas-bg: #fbf9f4;
+
+    /* shadcn token bridges (map to palette) */
+    --background: 45 33% 95%;
+    --foreground: 45 8% 10%;
+    --card: 45 33% 95%;
+    --card-foreground: 45 8% 10%;
+    --popover: 45 33% 95%;
+    --popover-foreground: 45 8% 10%;
+    --primary: 160 32% 27%;
+    --primary-foreground: 45 33% 95%;
+    --secondary: 42 24% 90%;
+    --secondary-foreground: 45 8% 10%;
+    --muted: 42 24% 90%;
+    --muted-foreground: 45 7% 34%;
+    --accent: 42 24% 90%;
+    --accent-foreground: 45 8% 10%;
+    --destructive: 8 48% 44%;
+    --destructive-foreground: 45 33% 95%;
+    --border: 42 18% 81%;
+    --input: 42 18% 81%;
+    --ring: 160 32% 27%;
+    --radius: 1rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: var(--green-tint);
+  }
+}
+
+@layer utilities {
+  .font-mono-rg {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  .font-serif-rg {
+    font-family: 'Instrument Serif', Georgia, serif;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .marching-ants {
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--green) 0px,
+      var(--green) 8px,
+      transparent 8px,
+      transparent 16px
+    );
+    animation: ants 1s linear infinite;
+  }
+}
+
+@keyframes ants {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marching-ants {
+    animation: none;
+  }
+}
