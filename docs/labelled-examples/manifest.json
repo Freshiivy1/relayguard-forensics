@@ -1,0 +1,86 @@
+{
+  "description": "Labelled audio examples for RelayGuard evaluation. Ground truth from the case history; app verdicts recorded at the labelled version.",
+  "cases": [
+    {
+      "id": "case1-false-match-v6",
+      "type": "failure",
+      "files": {
+        "b_original": "case1-b-original.mp3",
+        "a_original": null
+      },
+      "note": "The v6 failure that motivated corpus calibration. A audio not recoverable (pre-v2 export did not embed audio); analysis JSON preserved at relayguard-analysis-2026-08-26T13-58-08.json.",
+      "ground_truth": {
+        "same_speaker": false,
+        "b_relay": "suspected"
+      },
+      "app_result_at_v5": {
+        "verdict": "MATCH",
+        "confidence": 0.87,
+        "correct": false
+      },
+      "app_result_at_v6_plus": {
+        "verdict": "DIFFERENT (5/5 voice panel)",
+        "correct": true
+      }
+    },
+    {
+      "id": "case2-different-speaker-correct",
+      "type": "success",
+      "files": {
+        "a_original": "case2-a-original.mp3",
+        "b_original": "case2-b-original.mp3"
+      },
+      "ground_truth": {
+        "same_speaker": false,
+        "b_relay": "suspected"
+      },
+      "app_result_at_v7": {
+        "verdict": "UNCERTAIN (quality gate) with voice panel 5/5 DIFFERENT",
+        "voice_panel": {
+          "mfcc_v2": 0.103,
+          "fisher": 0.031,
+          "formant": 0.17,
+          "f0": 0.153,
+          "ltas": 0.001
+        },
+        "flags": [
+          "BASS_DEPLETED"
+        ],
+        "correct": true
+      }
+    },
+    {
+      "id": "demo-set",
+      "type": "labelled-corpus",
+      "files": {
+        "demo-quiet-handset-a.m4a": {
+          "mic": "handset",
+          "room": "quiet"
+        },
+        "demo-quiet-handset-b.m4a": {
+          "mic": "handset",
+          "room": "quiet"
+        },
+        "demo-quiet-speakerphone.m4a": {
+          "mic": "speakerphone",
+          "room": "quiet"
+        },
+        "demo-high-bg-handset.m4a": {
+          "mic": "handset",
+          "room": "noisy"
+        },
+        "demo-high-bg-speakerphone.m4a": {
+          "mic": "speakerphone",
+          "room": "noisy"
+        }
+      },
+      "note": "User field recordings. Ground truth encoded in filenames. Baseline expectations: handset noise bed ~-67 dB under speech vs speakerphone ~-8.5 dB; spectral smear ~0.0034 (handset) vs ~0.1469 (speakerphone); duty cue flips sign in noise and must be read with the noise measurement."
+    },
+    {
+      "id": "voxforge-fixtures",
+      "type": "labelled-corpus",
+      "files": "docs/test-fixtures/*.wav",
+      "note": "8 male speakers x 2 utterances + user_voice.wav; manifest at docs/test-fixtures/manifest.json. Same-speaker pairs should reach SAME or NO_CONSENSUS; all cross pairs (incl. user vs 32 VoxForge males) should reach DIFFERENT or NO_CONSENSUS, never SAME. Known conservative boundary: GusSCalabrese pair yields DIFFERENT (creaky tail, F0 105->86 Hz) \u2014 matches held-out 1/180 false-different rate."
+    }
+  ]
+}
