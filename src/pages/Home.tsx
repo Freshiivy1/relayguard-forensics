@@ -10,6 +10,7 @@ import { compareClips, relayFingerprint } from '@/lib/audio/compare';
 import type { ScanCell } from '@/lib/audio/render';
 import type { GroundTruth } from '@/lib/audio/export';
 import type { ProbeMeta } from '@/lib/audio/probe';
+import type { CaptureMeta } from '@/lib/audio/capture';
 import { stopAll } from '@/lib/audio/player';
 
 const SR = 16000;
@@ -106,7 +107,14 @@ export default function Home() {
   const scrollPending = useRef(false);
 
   const loadClip = useCallback(
-    async (side: 'A' | 'B', blob: Blob, name: string, source: ClipMeta['source'], probe?: ProbeMeta) => {
+    async (
+      side: 'A' | 'B',
+      blob: Blob,
+      name: string,
+      source: ClipMeta['source'],
+      probe?: ProbeMeta,
+      capture?: CaptureMeta,
+    ) => {
       const setErr = side === 'A' ? setErrA : setErrB;
       const setClip = side === 'A' ? setClipA : setClipB;
       setErr(null);
@@ -131,6 +139,7 @@ export default function Home() {
           raw,
           source,
           probe,
+          capture,
         });
       } catch {
         setErr("Couldn't decode this file. Try WAV, MP3, or M4A.");
@@ -207,6 +216,7 @@ export default function Home() {
           originalSampleRate: clipA.originalSampleRate,
           source: clipA.source,
           probe: clipA.probe,
+          capture: clipA.capture,
         },
         metaB: {
           name: clipB.name,
@@ -214,6 +224,7 @@ export default function Home() {
           originalSampleRate: clipB.originalSampleRate,
           source: clipB.source,
           probe: clipB.probe,
+          capture: clipB.capture,
         },
       }));
       setSweepKey((k) => k + 1);
@@ -315,7 +326,7 @@ export default function Home() {
             error={errA}
             otherLoaded={Boolean(clipB)}
             demos={DEMO_A}
-            onBlob={(b, n, s, p) => void loadClip('A', b, n, s, p)}
+            onBlob={(b, n, s, p, c) => void loadClip('A', b, n, s, p, c)}
             onRemove={() => {
               stopAll();
               setClipA(null);
@@ -330,7 +341,7 @@ export default function Home() {
             error={errB}
             otherLoaded={Boolean(clipA)}
             demos={DEMO_B}
-            onBlob={(b, n, s, p) => void loadClip('B', b, n, s, p)}
+            onBlob={(b, n, s, p, c) => void loadClip('B', b, n, s, p, c)}
             onRemove={() => {
               stopAll();
               setClipB(null);

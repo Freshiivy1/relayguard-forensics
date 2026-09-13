@@ -90,6 +90,10 @@ const FAQ = [
     q: 'Can I export the evidence?',
     a: 'The evidence readout is plain numbers on the page; screenshot it or copy the values freely.',
   },
+  {
+    q: 'Does this use the phone-call DSP on iPhone?',
+    a: "Yes for capture, no for the network. The on-device processing — noise suppression, echo cancellation, auto-gain, bottom-mic pickup, and Voice Isolation on iOS 17+ — is tied to the audio session mode, not to phone calls, and the HANDSET record mode requests exactly that chain (the granted-DSP chips show what the browser actually applied). Carrier-side call processing happens inside the phone network and is not available to any web app.",
+  },
 ] as const;
 
 /* ------------------------------ shared bits ------------------------------- */

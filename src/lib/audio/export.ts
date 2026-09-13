@@ -6,6 +6,7 @@ import { VOTE_SAME_AT, VOTE_DIFFERENT_AT } from './voiceCalibration';
 import type { ComparisonResult } from './compare';
 import type { ClipProfile } from './features';
 import type { ProbeMeta } from './probe';
+import type { CaptureMeta } from './capture';
 import type { ScanCell } from './render';
 
 export type GroundTruth = 'direct_call' | 'speakerphone_relay' | 'unknown';
@@ -23,6 +24,24 @@ export interface ClipExportMeta {
   source: 'file' | 'demo' | 'recording';
   /** challenge-noise metadata, present only on clips recorded with the probe */
   probe?: ProbeMeta;
+  /** mic capture-mode metadata, present only on mic recordings */
+  capture?: CaptureMeta;
+}
+
+/** Plain-JSON capture metadata for clip exports. */
+function serializeCaptureMeta(capture: CaptureMeta | undefined) {
+  if (!capture) return null;
+  return {
+    mode: capture.mode,
+    granted: {
+      echo_cancellation: capture.granted.echoCancellation ?? null,
+      noise_suppression: capture.granted.noiseSuppression ?? null,
+      auto_gain_control: capture.granted.autoGainControl ?? null,
+      voice_isolation: capture.granted.voiceIsolation ?? null,
+      channel_count: capture.granted.channelCount ?? null,
+      sample_rate: capture.granted.sampleRate ?? null,
+    },
+  };
 }
 
 /** Plain-JSON probe metadata (snake_case) for clip exports. */
@@ -224,6 +243,7 @@ export function buildAnalysisObject(input: AnalysisExportInput) {
     original_sample_rate: meta.originalSampleRate,
     sample_rate: input.sampleRate,
     probe: serializeProbeMeta(meta.probe),
+    capture: serializeCaptureMeta(meta.capture),
     features: {
       original: serializeProfile(original),
       normalized: serializeProfile(normalized),

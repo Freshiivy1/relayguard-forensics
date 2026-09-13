@@ -12,6 +12,15 @@ import {
   PROBE_SEED,
   type ProbeMeta,
 } from '@/lib/audio/probe';
+import {
+  CAPTURE_MODES,
+  captureConstraints,
+  grantedChips,
+  readGrantedSettings,
+  type CaptureGranted,
+  type CaptureMeta,
+  type CaptureMode,
+} from '@/lib/audio/capture';
 import ClipPlayer from './ClipPlayer';
 
 export interface ClipMeta {
@@ -22,6 +31,8 @@ export interface ClipMeta {
   source: 'file' | 'demo' | 'recording';
   /** challenge-noise metadata — present only when recorded with the probe */
   probe?: ProbeMeta;
+  /** mic capture-mode metadata — present only on mic recordings */
+  capture?: CaptureMeta;
 }
 
 interface Props {
@@ -33,7 +44,13 @@ interface Props {
   error: string | null;
   otherLoaded: boolean;
   demos: { label: string; url: string }[];
-  onBlob: (blob: Blob, name: string, source: ClipMeta['source'], probe?: ProbeMeta) => void;
+  onBlob: (
+    blob: Blob,
+    name: string,
+    source: ClipMeta['source'],
+    probe?: ProbeMeta,
+    capture?: CaptureMeta,
+  ) => void;
   onRemove: () => void;
 }
 
@@ -65,11 +82,18 @@ export default function DropzoneCard(props: Props) {
   const [probeOn, setProbeOn] = useState(props.side === 'B');
   const [probeLevel, setProbeLevel] = useState(PROBE_DEFAULT_LEVEL);
   const [probeActive, setProbeActive] = useState(false);
+  // Capture mode: A defaults to the handset phone-mic, B to raw speakerphone
+  // far-mic (the forensic relay case). User can switch either.
+  const [captureMode, setCaptureMode] = useState<CaptureMode>(
+    props.side === 'A' ? 'handset' : 'speakerphone',
+  );
+  const [granted, setGranted] = useState<CaptureGranted | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const prevClip = useRef<ClipMeta | null>(null);
   const probeMetaRef = useRef<ProbeMeta | null>(null);
+  const captureMetaRef = useRef<CaptureMeta | null>(null);
   const reducedMotion = useReducedMotion();
 
   const accent = props.side === 'A' ? 'green' : 'red';
@@ -104,7 +128,9 @@ export default function DropzoneCard(props: Props) {
     }
     setRecError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: captureConstraints(captureMode),
+      });
       const rec = new MediaRecorder(stream);
       chunksRef.current = [];
       probeMetaRef.current = {
@@ -113,6 +139,12 @@ export default function DropzoneCard(props: Props) {
         level: probeLevel,
         band: [PROBE_BAND[0], PROBE_BAND[1]],
       };
+      // Browsers silently drop unsupported constraints — read back what was
+      // ACTUALLY granted so we never claim DSP that isn't active.
+      const track = stream.getAudioTracks()[0];
+      const applied = track ? readGrantedSettings(track) : {};
+      setGranted(applied);
+      captureMetaRef.current = { mode: captureMode, granted: applied };
       rec.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
@@ -127,9 +159,11 @@ export default function DropzoneCard(props: Props) {
             `Recording ${new Date().toLocaleTimeString()}`,
             'recording',
             probeMetaRef.current ?? undefined,
+            captureMetaRef.current ?? undefined,
           );
         }
         probeMetaRef.current = null;
+        captureMetaRef.current = null;
         setRecording(false);
         recorderRef.current = null;
       };
@@ -144,6 +178,8 @@ export default function DropzoneCard(props: Props) {
       stopProbe(true);
       setProbeActive(false);
       probeMetaRef.current = null;
+      captureMetaRef.current = null;
+      setGranted(null);
       setRecError('Microphone unavailable — check browser permissions.');
       setRecording(false);
     }
@@ -252,6 +288,45 @@ export default function DropzoneCard(props: Props) {
                   </button>
                 </div>
 
+                {/* mic capture-mode picker */}
+                <div
+                  className="mt-3 flex flex-col items-center gap-1.5"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
+                  <div
+                    role="radiogroup"
+                    aria-label="Microphone capture mode"
+                    className="flex flex-wrap justify-center overflow-hidden rounded-[10px] border border-hairline"
+                  >
+                    {(Object.keys(CAPTURE_MODES) as CaptureMode[]).map((mode) => {
+                      const selected = captureMode === mode;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          disabled={recording}
+                          onClick={() => setCaptureMode(mode)}
+                          className={`px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] transition-colors ${
+                            selected
+                              ? accent === 'green'
+                                ? 'bg-green-tint text-green-deep'
+                                : 'bg-red-tint text-red-deep'
+                              : 'bg-canvas-bg text-ink-faint hover:text-ink-soft'
+                          } ${recording ? 'cursor-not-allowed opacity-60' : ''}`}
+                        >
+                          {CAPTURE_MODES[mode].label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="max-w-[300px] text-[11px] leading-snug text-ink-faint">
+                    {CAPTURE_MODES[captureMode].hint}
+                  </p>
+                </div>
+
                 {/* challenge noise (probe) controls */}
                 <div
                   className="mt-3 flex flex-col items-center gap-1.5"
@@ -312,6 +387,27 @@ export default function DropzoneCard(props: Props) {
                   }}
                 />
               </div>
+
+              {/* granted-DSP readout — what the browser actually applied */}
+              {recording && granted && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-faint">
+                    {CAPTURE_MODES[captureMode].shortLabel} granted:
+                  </span>
+                  {grantedChips(captureMode, granted).map((chip) => (
+                    <span
+                      key={chip.label}
+                      className={`rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${
+                        chip.ok
+                          ? 'border-hairline bg-canvas-bg text-ink-soft'
+                          : 'border-amber bg-amber-tint text-amber-deep'
+                      }`}
+                    >
+                      {chip.label}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               {/* live probe indicator */}
               {recording && probeActive && (
@@ -375,6 +471,14 @@ export default function DropzoneCard(props: Props) {
                     {props.clip.duration.toFixed(2)} s · src {Math.round(props.clip.originalSampleRate / 100) / 10} kHz
                     → 16 kHz mono
                   </p>
+                  {props.clip.capture && (
+                    <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-ink-faint">
+                      {CAPTURE_MODES[props.clip.capture.mode].label} ·{' '}
+                      {grantedChips(props.clip.capture.mode, props.clip.capture.granted)
+                        .map((c) => c.label)
+                        .join(' · ')}
+                    </p>
+                  )}
                 </div>
                 <button
                   type="button"
