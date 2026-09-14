@@ -22,9 +22,13 @@
 // VOTE: p ≥ VOTE_SAME_AT (0.60) → 'same', p ≤ VOTE_DIFFERENT_AT (0.40) →
 // 'different', else abstain (abstain also under 10 voiced/speech frames).
 //
-// CONSENSUS RULE (exact, from the calibration run):
-//   consensus = 'same'      iff same      ≥ 3 AND different === 0
-//   consensus = 'different' iff different ≥ 3 AND same      === 0
+// CONSENSUS RULE (user rule, updated 2026-09-14 ground-truth audit):
+//   consensus = 'same'      iff same      ≥ 3 AND same > different
+//     ("if 3/5 agree it's the same voice, it's certain — even if quality is bad";
+//      dissent alone does not block certainty, a majority of the 5 does)
+//   consensus = 'different' iff different ≥ 3 AND same === 0
+//     (kept strict: a false DIFFERENT only costs an UNCERTAIN, a false SAME
+//      certifies the wrong person — so the different camp needs unanimity)
 //   otherwise → 'no_consensus'.
 //   A 'same' consensus OVERRIDES the spectral-integrity flag veto (flags stay
 //   informational). A 'different' consensus VETOES any MATCH — the voices are
@@ -116,8 +120,8 @@ export { VOTE_SAME_AT, VOTE_DIFFERENT_AT };
 export const VOICE_RULE_TEXT =
   'Calibrated panel: each matcher maps its raw score through a corpus-trained logistic to a same-voice probability p ' +
   `(p ≥ ${VOTE_SAME_AT} → SAME, p ≤ ${VOTE_DIFFERENT_AT} → DIFFERENT, else abstain; abstain also under ${VOICE_MIN_FRAMES} voiced frames). ` +
-  'Consensus over non-abstaining matchers: ≥3 SAME with 0 DIFFERENT → SAME VOICE (overrides the spectral-integrity flag veto); ' +
-  '≥3 DIFFERENT with 0 SAME → DIFFERENT VOICE (vetoes any MATCH); otherwise NO CONSENSUS.';
+  'Consensus over non-abstaining matchers: ≥3 SAME with SAME > DIFFERENT → SAME VOICE (3/5 agreement is certain; overrides the spectral-integrity flag veto); ' +
+  '≥3 DIFFERENT with 0 SAME → DIFFERENT VOICE (vetoes any MATCH); otherwise NO CONSENSUS. A NO CONSENSUS panel cannot certify a MATCH.';
 
 function clamp01(v: number): number {
   return Math.max(0, Math.min(1, v));
@@ -697,7 +701,7 @@ export function compareVoicePanel(
   const abstainCount = matchers.length - sameCount - differentCount;
   const voters = sameCount + differentCount;
   let consensus: VoiceConsensus = 'no_consensus';
-  if (sameCount >= 3 && differentCount === 0) consensus = 'same';
+  if (sameCount >= 3 && sameCount > differentCount) consensus = 'same';
   else if (differentCount >= 3 && sameCount === 0) consensus = 'different';
   const agreeCount =
     consensus === 'same'
