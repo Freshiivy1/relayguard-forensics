@@ -183,6 +183,9 @@ export interface ComparisonResult {
   /** true when a ≥3/5 different-voice panel consensus vetoed a would-be MATCH —
    * the voices are not the same person regardless of channel similarity */
   voiceVeto: boolean;
+  /** true when a would-be MATCH was downgraded to UNCERTAIN because the panel
+   * voted but reached no_consensus — MATCH requires a ≥3/5 same-voice consensus */
+  voiceGate: boolean;
   relay: { a: RelayFingerprint; b: RelayFingerprint; voteRelay: boolean };
   envelope: EnvelopeSignal;
   spectralSmear: SmearSignal;
@@ -745,6 +748,33 @@ export function compareClips(
     }
   }
 
+  // USER RULE — MATCH certainty gate (ground-truth audit fix): MATCH is a claim
+  // of identity certainty, so it requires the panel's ≥3/5 same-voice consensus.
+  // A panel that voted but cannot agree (no_consensus) can never certify a
+  // MATCH — indecision downgrades MATCH to UNCERTAIN. This closes the leak
+  // where clean, no-relay-cue pairs of DIFFERENT voices reached MATCH on
+  // channel similarity alone (13.5% of different-voice pairs in the audit).
+  // A panel with zero voters (insufficient speech) keeps legacy channel-only
+  // behaviour and is already confidence-reduced.
+  let voiceGate = false;
+  if (verdict === 'MATCH' && !voicePanel.overrideEngaged && voicePanel.voters > 0) {
+    verdict = 'UNCERTAIN';
+    voiceGate = true;
+  }
+
+  // Mirror of the user rule — a ≥3/5 SAME consensus IS certainty even when the
+  // channel cues are marginal: upgrade a borderline UNCERTAIN to MATCH when the
+  // panel is certain-same, the net weighted signal is non-relay, and no
+  // integrity flag fired.
+  if (
+    verdict === 'UNCERTAIN' &&
+    voicePanel.overrideEngaged &&
+    weightedScore < 0 &&
+    spectralIntegrity.flags.length === 0
+  ) {
+    verdict = 'MATCH';
+  }
+
   let confidence = Math.round(50 + 50 * Math.min(1, Math.abs(weightedScore)));
   if (reducedConfidence) confidence = Math.max(35, confidence - 15);
   // A same-voice panel consensus that overrode the flag veto is strong
@@ -761,6 +791,7 @@ export function compareClips(
     flagVetoed,
     flagOverride,
     voiceVeto,
+    voiceGate,
     relay: { a: ra, b: rb, voteRelay: relayVoteRelay },
     envelope,
     spectralSmear,
@@ -786,6 +817,7 @@ export function compareClips(
     flagVetoed,
     flagOverride,
     voiceVeto,
+    voiceGate,
     relay: { a: ra, b: rb, voteRelay: relayVoteRelay },
     envelope,
     spectralSmear,
@@ -815,6 +847,7 @@ interface ExplInput {
   flagVetoed: boolean;
   flagOverride: 'voice_consensus' | null;
   voiceVeto: boolean;
+  voiceGate: boolean;
   relay: { a: RelayFingerprint; b: RelayFingerprint; voteRelay: boolean };
   envelope: EnvelopeSignal;
   spectralSmear: SmearSignal;
@@ -838,6 +871,11 @@ function buildExplanation(x: ExplInput): string {
   } else if (x.flagOverride === 'voice_consensus') {
     parts.push(
       `All-quality override: ${x.voicePanel.agreeCount}/5 voice biometric matchers agree this is the same voice — quality flags noted but not blocking.`,
+    );
+  }
+  if (x.voiceGate) {
+    parts.push(
+      `Identity not certified: the voice panel voted but could not reach a ≥3/5 same-voice consensus, so a clean channel match alone cannot produce a MATCH — downgraded to UNCERTAIN.`,
     );
   }
 
