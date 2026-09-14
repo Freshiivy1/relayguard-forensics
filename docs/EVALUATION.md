@@ -63,8 +63,10 @@ Five matchers, each mapping a raw score through its shipped logistic `p = 1/(1+e
 | ltas | cosine of 24 log bands, 200–3600 Hz | 16.1% |
 
 Voting: p ≥ **0.60** → same; p ≤ **0.40** → different; else abstain.
-Consensus: **≥3 same-votes with 0 different-votes → SAME; ≥3 different-votes with 0 same-votes → DIFFERENT;
-otherwise NO_CONSENSUS.** A 3/5 agreement rule means abstentions and single dissenters block certainty by design.
+Consensus (updated 2026-09-14, ground-truth audit): **≥3 same-votes with same > different → SAME (the 3/5 rule:
+3/5 agreeing is certain even in bad quality); ≥3 different-votes with 0 same-votes → DIFFERENT (kept strict);
+otherwise NO_CONSENSUS. A NO CONSENSUS panel cannot certify a MATCH — MATCH requires a SAME consensus
+(audit fix: closes the 13.5% false-MATCH leak on clean different-voice pairs; measured 0/37 after the fix).** A 3/5 agreement rule means abstentions and single dissenters block certainty by design.
 
 ## 5. Calibration methodology
 
