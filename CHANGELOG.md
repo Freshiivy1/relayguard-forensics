@@ -1,5 +1,19 @@
 # Changelog
 
+## v7.0.1 — MATCH certainty gate + literal 3/5 same-rule (2026-09-14)
+- Ground-truth audit harness (headless engine over 48 labelled pairs)
+- compare.ts: MATCH now requires a ≥3/5 same-voice panel consensus; a no_consensus panel downgrades MATCH to UNCERTAIN
+  (fixes 5/37 = 13.5% false-MATCH leak on clean different-voice pairs → 0/37)
+- voice.ts: same-consensus = ≥3 same votes with same > different (user's literal 3/5 rule); different-consensus kept strict
+- Measured after fix: panel false-SAME 0/37, end-to-end false MATCH 0/37, same-voice panel SAME 5/8
+
+## v7.0.1 — MATCH certainty gate + literal 3/5 same-rule (2026-09-14)
+- Ground-truth audit harness (headless engine over 48 labelled pairs): results in `docs/labelled-examples/` terms
+- compare.ts: MATCH now requires a ≥3/5 same-voice panel consensus; a no_consensus panel downgrades MATCH to UNCERTAIN
+  (fixes 5/37 = 13.5% false-MATCH leak on clean different-voice pairs → 0/37)
+- voice.ts: same-consensus = ≥3 same votes with same > different (user's literal 3/5 rule); different-consensus kept strict
+- Measured after fix: panel false-SAME 0/37, end-to-end false MATCH 0/37, same-voice panel SAME 5/8
+
 Git tags start at v7.0.0. The GitHub repo was seeded with squashed commits, so earlier versions are
 identified here by their commit hashes in the original history (recorded below). From v7.0.0 onward,
 `package.json` `version` and git tags are authoritative.
